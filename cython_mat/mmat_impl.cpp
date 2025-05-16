@@ -20,8 +20,8 @@ template <typename DTYPE> inline DTYPE &at(DTYPE *p, int cols, int i, int j) {
 
 // Multiplication de matrices plates par blocs
 template <typename DTYPE>
-void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, const DTYPE *D, int n, int m,
-                         int p, int q, int block_size) {
+void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, const DTYPE *D, DTYPE *E, int n, int m,
+                         int p, int q, int r, int block_size) {
   double dk = sqrt(m);
   double max[n] = {};
   std::fill_n(max, block_size, -DBL_MAX);
@@ -78,9 +78,9 @@ void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, const DTYPE *
           for (int jj = j; jj < std::min(j + block_size, q); ++jj) {
             double sum = 0.0;
             for (int kk = k; kk < std::min(k + block_size, p); ++kk) {
-              sum += at(C, n, ii, jj) * at(D, q, kk, jj);
+              sum += at(C, n, ii, kk) * at(D, q, kk, jj);
             }
-            at(C, n, ii, jj) = sum;
+            at(E, r, ii, jj) += sum;
           }
         }
       }
@@ -182,18 +182,18 @@ void BlockMatrixMultiplyAVX(const float *A, const float *B, float *C, int n,
   }
 }
 
-void mmat_impl_cpp(int n_row, int n_col, int k, int v, const float *p1,
-                   const float *p2, float *res, const float *p3, int block_size, int version) {
+void mmat_impl_cpp(int n_row, int n_col, int k, int v, int l, const float *p1,
+                   const float *p2, float *res, const float *p3, float *res2, int block_size, int version) {
   if (version == 0)
-    BlockMatrixMultiply(p1, p2, res, p3, n_row, k, n_col, v, block_size);
+    BlockMatrixMultiply(p1, p2, res, p3, res2, n_row, k, n_col, v, l, block_size);
   else
     BlockMatrixMultiplyAVX(p1, p2, res, n_row, k, n_col, block_size);
 }
 
-void mmat_impl_cpp(int n_row, int n_col, int k, int v, const double *p1,
-                   const double *p2, double *res, const double *p3, int block_size, int version) {
+void mmat_impl_cpp(int n_row, int n_col, int k, int v, int l, const double *p1,
+                   const double *p2, double *res, const double *p3, double *res2, int block_size, int version) {
   if (version == 0)
-    BlockMatrixMultiply(p1, p2, res, p3, n_row, k, n_col, v, block_size);
+    BlockMatrixMultiply(p1, p2, res, p3, res2, n_row, k, n_col, v, l, block_size);
   else
     BlockMatrixMultiplyAVX(p1, p2, res, n_row, k, n_col, block_size);
 }
