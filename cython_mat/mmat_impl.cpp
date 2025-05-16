@@ -5,6 +5,8 @@
 #include <iostream>
 #include <omp.h>
 #include <math.h>
+#include <cfloat>
+
 
 #ifdef __AVX2__
 #else
@@ -18,12 +20,11 @@ template <typename DTYPE> inline DTYPE &at(DTYPE *p, int cols, int i, int j) {
 
 // Multiplication de matrices plates par blocs
 template <typename DTYPE>
-void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, int n, int m,
-                         int p, int block_size) {
+void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, const DTYPE *D, DTYPE *E, int n, int m,
+                         int p, int q, int r, int block_size) {
   double dk = sqrt(m);
   double max[n] = {};
-  double exp_sum = 0;
-  std::fill_n(max, block_size, -1);
+  std::fill_n(max, block_size, -DBL_MAX);
   #pragma omp parallel for collapse(2) schedule(dynamic)
   for (int i = 0; i < n; i += block_size) {
     //double exp_sum[block_size] = {};
@@ -40,8 +41,8 @@ void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, int n, int m,
               sum += at(A, m, ii, kk) * at(B, p, jj, kk);
             }
             at(C, p, ii, jj) += sum/dk;
-            if(max[i] == -1 || max[ii] > at(C, p, ii, jj)){
-                max[i] = at(C, p, ii, jj);
+            if(max[ii] < at(C, p, ii, jj)){
+                max[ii] = at(C, p, ii, jj);
             }
             //exp_sum[ii] += exp(at(C, p, ii, jj));
             //if (val > max_val[ii - i]) {
@@ -56,6 +57,7 @@ void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, int n, int m,
   }
   #pragma omp parallel for schedule(dynamic)
   for(int i = 0; i < n; ++i){
+    double exp_sum = 0;
     for(int j = 0; j< p; ++j){
         double exp_val = exp(at(C, p, i, j) - max[i]);
         at(C, p, i, j) = exp_val;
@@ -64,9 +66,26 @@ void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, int n, int m,
     for(int j = 0; j< p; ++j){
         at(C, p, i, j) = at(C, p, i, j) / exp_sum;
     }
-    max[i] = -1;
-    exp_sum = 0;
     }
+
+
+  #pragma omp parallel for collapse(2) schedule(dynamic)
+  for (int i = 0; i < n; i += block_size) {
+    for (int j = 0; j < q; j += block_size) {
+      for (int k = 0; k < p; k += block_size) {
+        // Sous-bloc
+        for (int ii = i; ii < std::min(i + block_size, n); ++ii) {
+          for (int jj = j; jj < std::min(j + block_size, q); ++jj) {
+            double sum = 0.0;
+            for (int kk = k; kk < std::min(k + block_size, p); ++kk) {
+              sum += at(C, n, ii, kk) * at(D, q, kk, jj);
+            }
+            at(E, r, ii, jj) += sum;
+          }
+        }
+      }
+    }
+  }
 }
 
 void BlockMatrixMultiplyAVX(const double *A, const double *B, double *C, int n,
@@ -163,18 +182,18 @@ void BlockMatrixMultiplyAVX(const float *A, const float *B, float *C, int n,
   }
 }
 
-void mmat_impl_cpp(int n_row, int n_col, int k, const float *p1,
-                   const float *p2, float *res, int block_size, int version) {
+void mmat_impl_cpp(int n_row, int n_col, int k, int v, int l, const float *p1,
+                   const float *p2, float *res, const float *p3, float *res2, int block_size, int version) {
   if (version == 0)
-    BlockMatrixMultiply(p1, p2, res, n_row, k, n_col, block_size);
+    BlockMatrixMultiply(p1, p2, res, p3, res2, n_row, k, n_col, v, l, block_size);
   else
     BlockMatrixMultiplyAVX(p1, p2, res, n_row, k, n_col, block_size);
 }
 
-void mmat_impl_cpp(int n_row, int n_col, int k, const double *p1,
-                   const double *p2, double *res, int block_size, int version) {
+void mmat_impl_cpp(int n_row, int n_col, int k, int v, int l, const double *p1,
+                   const double *p2, double *res, const double *p3, double *res2, int block_size, int version) {
   if (version == 0)
-    BlockMatrixMultiply(p1, p2, res, n_row, k, n_col, block_size);
+    BlockMatrixMultiply(p1, p2, res, p3, res2, n_row, k, n_col, v, l, block_size);
   else
     BlockMatrixMultiplyAVX(p1, p2, res, n_row, k, n_col, block_size);
 }
