@@ -85,11 +85,11 @@ void BlockMatrixMultiply(const DTYPE *A, const DTYPE *B, DTYPE *C, const DTYPE *
 }
 
 void mmat_impl_cpp(int n_row, int n_col, int k, int v, int l, const float *p1,
-                   const float *p2, float *res, const float *p3, float *res2, int block_size, int version) {
+                   const float *p2, float *res, const float *p3, float *res2, int block_size) {
    BlockMatrixMultiply(p1, p2, res, p3, res2, n_row, k, n_col, v, l, block_size);
 }
 
 void mmat_impl_cpp(int n_row, int n_col, int k, int v, int l, const double *p1,
-                   const double *p2, double *res, const double *p3, double *res2, int block_size, int version) {
+                   const double *p2, double *res, const double *p3, double *res2, int block_size) {
    BlockMatrixMultiply(p1, p2, res, p3, res2, n_row, k, n_col, v, l, block_size);
 }
