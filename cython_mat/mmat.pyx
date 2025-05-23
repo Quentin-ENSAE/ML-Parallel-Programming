@@ -36,7 +36,7 @@ def _mmat(np.ndarray a, np.ndarray b, np.ndarray c, block_size=16):
     return res2
 
 
-def mmat(a, b, c, block_size=16):
+def cython_attention(a, b, c, block_size=16):
     """Matrix multiplication."""
     assert len(a.shape) == 2 == len(b.shape), (
         f"Only applies on matrices but a.shape={a.shape}, b.shape={b.shape}"

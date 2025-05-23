@@ -14,7 +14,7 @@ class TestMmat(unittest.TestCase):
                 m1 = np.random.rand(128, 128).astype(dtype)
                 m2 = np.random.rand(128, 128).astype(dtype)
                 m3 = np.random.rand(128, 128).astype(dtype)
-                res = mmat.mmat(m1, m2, m3, 16)
+                res = mmat.cython_attention(m1, m2, m3, 16)
                 np.testing.assert_allclose(softmax((m1 @ np.transpose(m2)) / m2.shape[1] ** 0.5) @ m3, res, atol=1e-4)
 
 if __name__ == "__main__":
