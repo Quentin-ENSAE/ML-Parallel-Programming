@@ -42,7 +42,7 @@ def measure_time(x, block_size):
 def exhaustive_grid_until_confidence(
     x,
     block_sizes,
-    initial_repeats=2,
+    extra_initial_repeats=0,
     free_runs=2,
     confidence=0.95,
     max_iter=100,
@@ -79,7 +79,7 @@ def exhaustive_grid_until_confidence(
     if verbose:
         print("🔍 Phase 1 : mesures initiales")
     for b in block_sizes:
-        for _ in range(initial_repeats):
+        for _ in range(1+extra_initial_repeats):
             t = measure_and_count(x, b)
             results[b].append(t)
         med = np.median(results[b])
@@ -140,15 +140,13 @@ def exhaustive_grid_until_confidence(
         p_history.append(p_vals)
 
         if all_confident:
-            if verbose:
-                print("\n✅ Confiance 95% atteinte pour le meilleur bloc.")
+            print("\n✅ Confiance 95% atteinte pour le meilleur bloc.")
             break
-
-        if it == max_iter and verbose:
-            print(f"\n❌ L’algorithme n’a convergé pour aucune taille de bloc avec une confiance de {confidence*100:.0f} %.")
-
-    if verbose and it < max_iter:
+        
+    if it < max_iter:
         print(f"\n✅ Résultat final : Bloc {best}, tests totaux = {measure_counter}")
+    else: 
+        print(f"\n❌ L’algorithme n’a convergé pour aucune taille de bloc avec une confiance de {confidence*100:.0f} %.")
 
     return {
         "best": best,
@@ -194,27 +192,24 @@ def smart_benchmark_probabilistic(
     x,
     block_sizes,
     *,
-    p_switch: float         = 0.70,
-    initial_repeats: int    = 2,
-    confidence: float       = 0.90,
-    free_runs: int          = 2,
-    extra_repeats_best: int = 1,  # Utilisé À CHAQUE ITÉRATION
-    max_iter: int           = 100,
-    verbose: bool           = True,
+    p_switch: float               = 0.7,
+    extra_initial_repeats: int    = 0,
+    confidence: float             = 0.95,
+    free_runs: int                = 2,
+    extra_repeats_best: int       = 0,  # Utilisé À CHAQUE ITÉRATION
+    max_iter: int                 = 100,
+    verbose: bool                 = False,
 ):
     block_sizes = sorted(set(block_sizes))
     results = {b: [] for b in block_sizes}
-    best_track = []  # Meilleur bloc à chaque itération
+    best_track = []
     p_stop = 1 - confidence
 
-    # Pour le 3e graphique
     best_measurements = []     # tuples (idx, best, t)
-    global_measure_counter = 0 # pour compter chaque mesure du best
-
-    # Pour les graphes par itération
-    measure_per_iter = []  # cumul du nombre de mesures à chaque itération
-    total_tests = 0        # total de mesures effectuées
-    p_history = []         # pour l'évolution de la p-value max
+    global_measure_counter = 0 # compteur de mesures best
+    measure_per_iter = []
+    total_tests = 0
+    p_history = []
 
     # (1) réchauffe-caches
     if free_runs > 0 and verbose:
@@ -229,22 +224,16 @@ def smart_benchmark_probabilistic(
     if verbose:
         print("🔍 Phase 1 : mesures initiales")
     for b in block_sizes:
-        for _ in range(initial_repeats):
+        for _ in range(2 + extra_initial_repeats):
             results[b].append(measure_time(x, b))
             total_tests += 1
         if verbose:
             print(f"Bloc {b:<4} → {np.mean(results[b]):.5f} s (n={len(results[b])})")
 
-    # (3) best initial + répétitions bonus (utilisé uniquement à l'init)
+    # (3) best initial
     best = min(block_sizes, key=lambda b: np.mean(results[b]))
     if verbose:
         print(f"\nBest initial : {best}")
-    for _ in range(extra_repeats_best):
-        t = measure_time(x, best)
-        global_measure_counter += 1
-        best_measurements.append((global_measure_counter, best, t))
-        results[best].append(t)
-        total_tests += 1
 
     # Boucle principale
     for it in range(1, max_iter + 1):
@@ -293,12 +282,7 @@ def smart_benchmark_probabilistic(
                 print(f"↪️ Switch : {best} → {new_best} (p={max_p:.3f})")
             best = new_best
 
-        # Sélection des blocs à remesurer
-        to_measure = [best] + [b for b, p in p_better.items() if p >= p_stop]
-        if verbose:
-            print("Mesures supplémentaires :", to_measure)
-
-        # Ajout extra_repeats_best mesures du best à CHAQUE itération
+        # Ajout extra_repeats_best mesures du best À CHAQUE ITÉRATION
         for _ in range(extra_repeats_best):
             t = measure_time(x, best)
             total_tests += 1
@@ -308,7 +292,10 @@ def smart_benchmark_probabilistic(
             if verbose and extra_repeats_best > 0:
                 print(f"  (extra) Bloc {best:<4} → {t:.5f} s (n={len(results[best])})")
 
-        # Puis les mesures "normales" (dont une du best qui fera doublon avec l'extra repeat)
+        # Mesures "normales" (y compris best)
+        to_measure = [best] + [b for b, p in p_better.items() if p >= p_stop]
+        if verbose:
+            print("Mesures supplémentaires :", to_measure)
         for b in to_measure:
             t = measure_time(x, b)
             total_tests += 1
@@ -322,11 +309,10 @@ def smart_benchmark_probabilistic(
         if it == max_iter:
             print(f"\n❌ L’algorithme n’a convergé pour aucune taille de bloc avec une confiance de {confidence*100:.0f} %.")
 
-    if verbose:
-        m_final = float(np.median(results[best]))
-        print(f"\n🏁 Best final : {best} (médiane={m_final:.5f} s), mesures={total_tests}")
 
-    # Pour compatibilité avec plot_all_exhaustive_graphs
+    m_final = float(np.median(results[best]))
+    print(f"\n🏁 Best final : {best} (médiane={m_final:.5f} s), mesures={total_tests}")
+
     return {
         "best": best,
         "results": results,

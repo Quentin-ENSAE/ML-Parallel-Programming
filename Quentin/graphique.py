@@ -73,7 +73,9 @@ def plot_best_time_colored(best_meas, figsize=(24, 6)):
     plt.tight_layout()
     plt.show()
 
-def plot_pvalue_evolution(best_track, p_history, step=1, figsize=(24, 6), p_switch = 0.7, confidence = 0.95 ):
+def plot_pvalue_evolution(
+    best_track, p_history, p_switch=0.5, p_stop=0.05, step=1, figsize=(24, 6)
+):
     """
     Affiche l'évolution de la p-value maximale à chaque itération,
     points colorés selon la taille du best et seuil p_stop.
@@ -96,19 +98,22 @@ def plot_pvalue_evolution(best_track, p_history, step=1, figsize=(24, 6), p_swit
                    s=100,
                    zorder=2,
                    label=f'Bloc {b}')
+    
     ax.axhline(p_switch,
                color='blue',
                linestyle='--',
                linewidth=1.5,
                zorder=0,
-               label=f'seuil changement de bloc size optimal = {p_switch}')
+               label=f'seuil swith best bloc size = {p_switch}')
 
-    ax.axhline(1 - confidence,
+
+    ax.axhline(p_stop,
                color='red',
                linestyle='--',
                linewidth=1.5,
                zorder=0,
-               label='seuil p_stop = {1 - - confidence}')
+               label=f'seuil p_stop = {p_stop}')
+
     ax.set_xlim(0, len(p_max))
     ax.set_xlabel("Itération")
     ax.set_ylabel("max P(b < best)")
@@ -143,13 +148,20 @@ def plot_all_graphs(
     plot_best_track(best_track, step, figsize)
     plot_time_distribution(results, blocks, figsize)
     plot_best_time_colored(best_measurements, figsize)
-    plot_pvalue_evolution(best_track, p_history, step, figsize, p_switch=p_switch)
+    # Ici, on précise tous les arguments après les deux premiers :
+    plot_pvalue_evolution(
+        best_track,
+        p_history,
+        p_switch=p_switch,
+        step=step,
+        figsize=figsize
+    )
 
 def compare_pvalue_evolution(
     best_track_1, p_history_1, label_1,
     best_track_2, p_history_2, label_2,
     step=1, p_switch_grille = 0.5,
-    p_switch_benchmark = 0.5,
+    p_switch_benchmark = 0.7,
     figsize=(24, 6)
 ):
     """
@@ -167,11 +179,11 @@ def compare_pvalue_evolution(
     iterations_2 = np.arange(1, len(p_max_2) + 1)
 
     fig, ax = plt.subplots(figsize=figsize)
-    ax.plot(iterations_1, p_max_1, marker='o', color='blue', label=label_1)
-    ax.plot(iterations_2, p_max_2, marker='s', color='orange', label=label_2)
+    ax.plot(iterations_1, p_max_1, marker='o', color='darkblue', label=label_1)
+    ax.plot(iterations_2, p_max_2, marker='s', color='darkgreen', label=label_2)
 
     ax.axhline(p_switch_grille, color='lightblue', linestyle='--', linewidth=1.5, label=f'seuil switch grille = {p_switch_grille}')
-    ax.axhline(p_switch_benchmark, color='darkblue', linestyle='--', linewidth=1.5, label=f'seuil switch adaptatif benchmark = {p_switch_benchmark}')
+    ax.axhline(p_switch_benchmark, color='lightgreen', linestyle='--', linewidth=1.5, label=f'seuil switch adaptatif benchmark = {p_switch_benchmark}')
 
     ax.axhline(0.05, color='red', linestyle='--', linewidth=1.5, label='seuil p_stop = 0.05')
 
