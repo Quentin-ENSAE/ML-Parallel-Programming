@@ -54,7 +54,7 @@ def exhaustive_grid_until_confidence(
 
     # Pour les tracés
     best_track = []
-    best_measurements = []
+    best_measurements = []        # contient une suite de tuple ('num_mesure_best_bloc_size', 'best_bloc_size', 'time')
     p_history = []
     measure_counter = 0           # total global
     measure_per_iter = []         # liste: nombre total de mesures après chaque itération
@@ -150,8 +150,15 @@ def exhaustive_grid_until_confidence(
     if verbose and it < max_iter:
         print(f"\n✅ Résultat final : Bloc {best}, tests totaux = {measure_counter}")
 
-    return best, results, measure_counter, best_track, best_measurements, p_history, measure_per_iter
-
+    return {
+        "best": best,
+        "results": results,
+        "measure_counter": measure_counter,
+        "best_track": best_track,
+        "best_measurements": best_measurements,
+        "p_history": p_history,
+        "measure_per_iter": measure_per_iter,
+    }
 
 
 
@@ -187,10 +194,10 @@ def smart_benchmark_probabilistic(
     x,
     block_sizes,
     *,
-    p_switch: float         = 0.50,
+    p_switch: float         = 0.70,
     initial_repeats: int    = 2,
     confidence: float       = 0.90,
-    free_runs: int          = 1,
+    free_runs: int          = 2,
     extra_repeats_best: int = 1,  # Utilisé À CHAQUE ITÉRATION
     max_iter: int           = 100,
     verbose: bool           = True,
@@ -320,4 +327,12 @@ def smart_benchmark_probabilistic(
         print(f"\n🏁 Best final : {best} (médiane={m_final:.5f} s), mesures={total_tests}")
 
     # Pour compatibilité avec plot_all_exhaustive_graphs
-    return best, results, total_tests, best_track, best_measurements, p_history, measure_per_iter
+    return {
+        "best": best,
+        "results": results,
+        "measure_counter": total_tests,
+        "best_track": best_track,
+        "best_measurements": best_measurements,
+        "p_history": p_history,
+        "measure_per_iter": measure_per_iter,
+    }

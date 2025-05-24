@@ -73,7 +73,7 @@ def plot_best_time_colored(best_meas, figsize=(24, 6)):
     plt.tight_layout()
     plt.show()
 
-def plot_pvalue_evolution(best_track, p_history, step=1, figsize=(24, 6)):
+def plot_pvalue_evolution(best_track, p_history, step=1, figsize=(24, 6), p_switch = 0.7, confidence = 0.95 ):
     """
     Affiche l'évolution de la p-value maximale à chaque itération,
     points colorés selon la taille du best et seuil p_stop.
@@ -96,19 +96,19 @@ def plot_pvalue_evolution(best_track, p_history, step=1, figsize=(24, 6)):
                    s=100,
                    zorder=2,
                    label=f'Bloc {b}')
-    ax.axhline(0.5,
+    ax.axhline(p_switch,
                color='blue',
                linestyle='--',
                linewidth=1.5,
                zorder=0,
-               label='seuil changement de bloc size optimal = 0.5')
+               label=f'seuil changement de bloc size optimal = {p_switch}')
 
-    ax.axhline(0.05,
+    ax.axhline(1 - confidence,
                color='red',
                linestyle='--',
                linewidth=1.5,
                zorder=0,
-               label='seuil p_stop = 0.05')
+               label='seuil p_stop = {1 - - confidence}')
     ax.set_xlim(0, len(p_max))
     ax.set_xlabel("Itération")
     ax.set_ylabel("max P(b < best)")
@@ -143,3 +143,40 @@ def plot_all_graphs(
     plot_time_distribution(results, blocks, figsize)
     plot_best_time_colored(best_measurements, figsize)
     plot_pvalue_evolution(best_track, p_history, step, figsize)
+
+def compare_pvalue_evolution(
+    best_track_1, p_history_1, label_1,
+    best_track_2, p_history_2, label_2,
+    step=1, figsize=(24, 6)
+):
+    """
+    Trace sur un même graphique l'évolution de la p-value max pour deux benchmarks.
+    Chaque courbe peut être colorée différemment et possède sa propre légende.
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import MultipleLocator
+
+    p_max_1 = [max(d.values()) if d else 0.0 for d in p_history_1]
+    p_max_2 = [max(d.values()) if d else 0.0 for d in p_history_2]
+
+    iterations_1 = np.arange(1, len(p_max_1) + 1)
+    iterations_2 = np.arange(1, len(p_max_2) + 1)
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(iterations_1, p_max_1, marker='o', color='blue', label=label_1)
+    ax.plot(iterations_2, p_max_2, marker='s', color='orange', label=label_2)
+
+    ax.axhline(0.5, color='blue', linestyle='--', linewidth=1.5, label='seuil switch = 0.5')
+    ax.axhline(0.05, color='red', linestyle='--', linewidth=1.5, label='seuil p_stop = 0.05')
+
+    ax.set_xlim(0, max(len(p_max_1), len(p_max_2)))
+    ax.set_xlabel("Itération")
+    ax.set_ylabel("max P(b < best)")
+    ax.set_title("Comparaison de l'évolution de la p-value maximale par itération")
+    ax.grid(True)
+    ax.xaxis.set_major_locator(MultipleLocator(step))
+
+    ax.legend(loc='upper right', framealpha=0.95)
+    plt.tight_layout()
+    plt.show()
