@@ -132,6 +132,7 @@ def plot_all_graphs(
     results,
     measure_per_iter,
     p_history,
+    p_switch,
     step=1,
     figsize=(24, 6)
 ):
@@ -142,12 +143,14 @@ def plot_all_graphs(
     plot_best_track(best_track, step, figsize)
     plot_time_distribution(results, blocks, figsize)
     plot_best_time_colored(best_measurements, figsize)
-    plot_pvalue_evolution(best_track, p_history, step, figsize)
+    plot_pvalue_evolution(best_track, p_history, step, figsize, p_switch=p_switch)
 
 def compare_pvalue_evolution(
     best_track_1, p_history_1, label_1,
     best_track_2, p_history_2, label_2,
-    step=1, figsize=(24, 6)
+    step=1, p_switch_grille = 0.5,
+    p_switch_benchmark = 0.5,
+    figsize=(24, 6)
 ):
     """
     Trace sur un même graphique l'évolution de la p-value max pour deux benchmarks.
@@ -167,7 +170,9 @@ def compare_pvalue_evolution(
     ax.plot(iterations_1, p_max_1, marker='o', color='blue', label=label_1)
     ax.plot(iterations_2, p_max_2, marker='s', color='orange', label=label_2)
 
-    ax.axhline(0.5, color='blue', linestyle='--', linewidth=1.5, label='seuil switch = 0.5')
+    ax.axhline(p_switch_grille, color='lightblue', linestyle='--', linewidth=1.5, label=f'seuil switch grille = {p_switch_grille}')
+    ax.axhline(p_switch_benchmark, color='darkblue', linestyle='--', linewidth=1.5, label=f'seuil switch adaptatif benchmark = {p_switch_benchmark}')
+
     ax.axhline(0.05, color='red', linestyle='--', linewidth=1.5, label='seuil p_stop = 0.05')
 
     ax.set_xlim(0, max(len(p_max_1), len(p_max_2)))
